@@ -3,48 +3,31 @@ import { DropzoneArea } from "react-mui-dropzone";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Modal from "@mui/material/Modal";
+import TextField from "@mui/material/TextField";
 import * as pdfjsLib from "pdfjs-dist";
 
+import { showPDF } from "./pdf";
 import "./App.css";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "//cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.worker.js";
 
 function App() {
-  const [loadedPDF, setLoadedPDF] = useState(null);
+  const [loadedPDF, setLoadedPDF] = useState("");
   const [open, setOpen] = useState(false);
   const fileReader = new FileReader();
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
-  const readPDF = (file) => {
-    const loadingTask = pdfjsLib.getDocument(file);
-    loadingTask.promise.then(
-      async (pdf) => {
-        const page = await pdf.getPage(1);
-        const textContent = await page.getTextContent();
-        setLoadedPDF(textContent.items.map((item) => item.str).join(" "));
-      },
-      (error) => {
-        console.log(error);
-        handleOpen();
-      }
-    );
-  };
-
   fileReader.onload = () => {
-    const typedarray = new Uint8Array(fileReader.result);
-    readPDF(typedarray);
+    showPDF(fileReader.result).then((text) => setLoadedPDF(text));
   };
 
-  const loadPDF = async (file) => {
-    if (file[0]) fileReader.readAsArrayBuffer(file[0]);
+  const loadPDF = (e) => {
+    const file = e[0];
+    if (file) fileReader.readAsDataURL(file);
   };
-
-  useEffect(() => {
-    console.log(loadedPDF);
-  }, [loadedPDF]);
 
   const style = {
     position: "absolute",
@@ -73,6 +56,12 @@ function App() {
           </Typography>
         </Box>
       </Modal>
+      <TextField
+        id="inputText"
+        variant="outlined"
+        style={{ width: "100%", marginTop: "2rem" }}
+        value={loadedPDF}
+      />
     </div>
   );
 }
