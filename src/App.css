@@ -3,6 +3,12 @@
   padding: 2rem 5rem;
 }
 
+@media screen and (max-width: 767px) {
+  .App {
+    padding: 1rem 1.5rem;
+  }
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;

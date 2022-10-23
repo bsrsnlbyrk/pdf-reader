@@ -11,14 +11,14 @@ var _PDF_DOC,
   _CANVAS = document.createElement("canvas");
 
 var pdfWorker;
-async function initPdfTesseractWorker() {
+async function initPdfTesseractWorker(setProgress, setIsWorkerInitialising) {
   pdfWorker = Tesseract.createWorker({
     logger: (msg) => {
       console.log(msg);
-      /* if(msg.status=='recognizing text') {
-            ocrPageProgress['style']['width']=`${parseInt(parseFloat(msg.progress)*100)}%`;
-            ocrPageProgressStatus.innerHTML=`<p class='mb-1 mt-1'>⏳ <strong>${parseInt(parseFloat(msg.progress)*100)}%</strong></p>`;
-        } */
+      if (msg.status === "recognizing text") {
+        setIsWorkerInitialising(false);
+        setProgress(parseInt(parseFloat(msg.progress) * 100));
+      }
     },
   });
 
@@ -85,7 +85,6 @@ const loadImage = (url) =>
 
 async function extractPdfText(loadedImg) {
   const result = await pdfWorker.recognize(loadedImg);
-
   let data = result.data;
 
   let words = data.words;
@@ -98,43 +97,32 @@ async function extractPdfText(loadedImg) {
         : str + " ";
     combinedText += newStr;
   }
-  /* ocrPageProgress['style']['width']='100%';
-            ocrPageProgress.classList.remove('progress-bar-animated');
-            ocrPageProgressStatus.innerHTML=`<p class='mb-1 mt-1'>⌛ <strong>Done.</strong></p>`; */
 
   return new Promise((resolve) => resolve(combinedText));
 }
 
-export async function showPDF(pdf_url) {
+export async function showPDF(pdf_url, setProgress, setIsWorkerInitialising) {
   try {
     _PDF_DOC = await pdfjsLib.getDocument({ url: pdf_url }).promise;
   } catch (error) {
-    console.log(error.message);
+    return new Promise((_, reject) => reject(error.message));
   }
 
   noOfPages = _PDF_DOC.numPages;
   let extractedText;
-  // totalPages.innerHTML = noOfPages;
 
   while (currentPage <= noOfPages) {
-    await initPdfTesseractWorker();
-
-    // pageLoadingSignal['style']['visibility']='visible';
-    // currentPageNo.innerHTML=currentPage;
+    await initPdfTesseractWorker(setProgress, setIsWorkerInitialising);
 
     _PAGE = await showPage(currentPage);
     let b64str = await scalePDFPage();
-    // pagePreview['style']['background-image']='url("'+b64str+'")';
-
     let loadedImg = await loadImage(b64str);
     extractedText = await extractPdfText(loadedImg);
-    // processedPages.insertAdjacentHTML('beforeend', "<p class='mb-1 mt-1'>🗹 <a href='"+b64str+"' download='"+currentPage+".png'>Page "+currentPage+"</a>— ⌛ <strong>Done.</strong></p>");
 
     await pdfWorker.terminate();
 
     currentPage++;
   } // end-while loop
 
-  // pageLoadingSignal['style']['visibility'] = 'hidden';
   return new Promise((resolve) => resolve(extractedText));
 }
